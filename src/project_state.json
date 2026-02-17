@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 3,
+  "summary": "Flutter app using layered + feature-based architecture: UI -> State (Provider/Riverpod) -> Services (business logic) -> Data (DB). Core modules planned: authentication (incl. biometrics), encrypted notes, NLP date/time extraction, calendar/event generation, unified dashboard, settings; strict rule that UI never accesses DB directly and all data operations go through services.",
+  "architectural_notes": [
+    "Use 4-layer architecture: Presentation (UI), State Management, Business Logic (Services), Data layer.",
+    "Presentation layer must not communicate directly with the database; all data operations go through service classes.",
+    "Feature-based folder structure under lib/features (auth, dashboard, notes, calendar, ai, settings) plus core/, services/, models/, routes/.",
+    "Recommended state management: Riverpod or Provider; avoid heavy setState in large-scale app.",
+    "Recommended pattern: UI -> Provider -> Service -> Database.",
+    "Encryption module uses AES-256; encryption key stored in secure storage; encrypt notes before saving and decrypt on retrieval.",
+    "NLP expected output structure includes date/time/confidence; NLP can be local (PyThaiNLP via backend) or API-based.",
+    "Database options considered: SQLite (sqflite) recommended for thesis alignment; cloud options include Supabase/Firebase."
+  ],
+  "known_issues": [],
+  "isFixRequest": false,
+  "existing_features": [
+    {
+      "id": "feature-create-a-feature-based-layered-frontend-code-organization-that-enforces-unidirectional-flow-ui-components-must-not-call-the-backend-actor-directly-instead-ui-uses-feature-scoped-hooks-state-service-layer-actor-client-calls",
+      "title": "Create a feature-based, layered frontend code organization that enforces unidirectional flow: UI components must not call the backend actor directly; instead, UI uses feature-scoped hooks/state → service layer → actor client calls.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-authentication-using-internet-identity-and-enforce-authenticated-access-for-note-event-and-settings-operations",
+      "title": "Implement authentication using Internet Identity and enforce authenticated access for note, event, and settings operations.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-notes-management-create-edit-delete-list-with-support-for-marking-a-note-as-private-and-storing-private-notes-encrypted-end-to-end-ciphertext-stored-on-the-backend",
+      "title": "Implement notes management (create, edit, delete, list) with support for marking a note as private and storing private notes encrypted end-to-end (ciphertext stored on the backend).",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-client-side-encryption-service-using-aes-256-web-crypto-with-a-per-user-key-stored-locally-in-the-browser-encrypt-private-notes-before-sending-them-to-the-backend-and-decrypt-them-after-retrieval",
+      "title": "Add a client-side encryption service using AES-256 (Web Crypto) with a per-user key stored locally in the browser; encrypt private notes before sending them to the backend and decrypt them after retrieval.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-an-nlp-date-time-extraction-module-that-analyzes-note-text-locally-no-external-ai-services-and-produces-structured-output-date-time-confidence-to-drive-event-suggestions",
+      "title": "Implement an NLP/date-time extraction module that analyzes note text locally (no external AI services) and produces structured output { date, time, confidence } to drive event suggestions.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-calendar-management-with-a-monthly-calendar-view-and-daily-agenda-allow-creating-events-manually-and-allow-creating-an-event-from-a-note-based-on-the-extracted-date-time-suggestion",
+      "title": "Implement calendar management with a monthly calendar view and daily agenda; allow creating events manually and allow creating an event from a note based on the extracted date/time suggestion.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-unified-dashboard-screen-that-surfaces-key-actions-and-summaries-for-notes-and-calendar-e-g-recent-notes-and-today-s-agenda-and-provides-navigation-to-core-features-notes-calendar-settings",
+      "title": "Create a unified dashboard screen that surfaces key actions and summaries for notes and calendar (e.g., recent notes and today’s agenda) and provides navigation to core features (Notes, Calendar, Settings).",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-settings-screen-module-with-basic-user-options-relevant-to-this-web-app-e-g-manage-encryption-key-lifecycle-actions-like-reset-export-warnings-and-general-ui-preferences-if-applicable",
+      "title": "Add a Settings screen/module with basic user options relevant to this web app (e.g., manage encryption key lifecycle actions like reset/export warnings, and general UI preferences if applicable).",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-clear-step-by-step-delivery-plan-inside-the-repo-as-documentation-describing-incremental-milestones-for-building-the-modules-in-order-mapping-each-milestone-to-the-app-routes-features-and-backend-endpoints",
+      "title": "Implement a clear step-by-step delivery plan inside the repo (as documentation) describing incremental milestones for building the modules in order, mapping each milestone to the app routes/features and backend endpoints.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-coherent-visual-theme-across-the-frontend-colors-typography-spacing-component-usage-suitable-for-a-secure-productivity-app-and-enforce-consistency-across-all-feature-screens",
+      "title": "Apply a coherent visual theme across the frontend (colors, typography, spacing, component usage) suitable for a secure productivity app, and enforce consistency across all feature screens.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Implement layered + feature-based Flutter project structure with unidirectional flow (UI -> Provider -> Service -> Database) and routing",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Authentication system: login/registration, secure token/session management, biometric auth (local_auth + flutter_secure_storage)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Notes management: create/edit/delete notes, include encrypted private notes",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Encryption & data security: AES-256 client-side encryption with key stored in secure storage; encrypt before save and decrypt on retrieval",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "NLP module for date/time extraction from note text (local backend via PyThaiNLP or API-based service) producing structured output and event suggestions",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Calendar module: monthly view + daily agenda; generate calendar events from NLP extraction; optional device calendar sync (table_calendar/device_calendar)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Unified dashboard interface integrating notes, AI/NLP, and calendar",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Settings feature screen/module",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Step-by-step implementation plan for building the app modules incrementally",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Secure Productivity",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

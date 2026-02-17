@@ -1,0 +1,364 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Secure Productivity (frontend) — auth-gated notes + encryption + NLP date extraction + calendar + dashboard",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Adopt a feature-based layered frontend architecture with unidirectional flow (UI → hooks/state → services → actor client wrapper).",
+      "acceptanceCriteria": [
+        "Frontend has a clear feature-based folder structure (e.g., features/auth, features/notes, features/calendar, features/settings, features/dashboard) plus shared core/services/util modules.",
+        "No page/component imports the actor/client directly; actor calls are wrapped by service functions per feature.",
+        "Data fetching/mutations are managed via React Query hooks (or equivalent) exposed by feature modules, not inside presentational components."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "create",
+          "description": "Create the app shell that wires routing, shared layout, and feature pages together without any direct backend actor usage (all data comes from feature hooks)."
+        },
+        {
+          "path": "frontend/src/core/actor/actorClient.ts",
+          "operation": "create",
+          "description": "Create a thin actor client wrapper that is only used by feature service functions (not directly by UI). The wrapper should be constructed/returned by feature hooks using the immutable useActor hook."
+        },
+        {
+          "path": "frontend/src/core/query/queryKeys.ts",
+          "operation": "create",
+          "description": "Centralize React Query keys for notes, events, settings, and auth-dependent data to ensure consistent caching and invalidation across features."
+        },
+        {
+          "path": "frontend/src/core/errors/formatError.ts",
+          "operation": "create",
+          "description": "Add shared error formatting utilities to convert backend authorization failures and other errors into user-friendly English messages."
+        },
+        {
+          "path": "frontend/src/features/auth/index.ts",
+          "operation": "create",
+          "description": "Export the auth feature public surface (AuthGate, hooks) so other features import from feature module boundaries rather than deep paths."
+        },
+        {
+          "path": "frontend/src/features/auth/hooks/useAuth.ts",
+          "operation": "create",
+          "description": "Provide a feature-scoped hook wrapping the immutable useInternetIdentity hook to expose isAuthenticated, principal display, and logout handling (including React Query cache clearing via a caller-provided callback)."
+        },
+        {
+          "path": "frontend/src/features/notes/index.ts",
+          "operation": "create",
+          "description": "Export notes feature hooks/components (e.g., useNotesList, useNote, useUpsertNote, useDeleteNote) so pages use hooks rather than services directly."
+        },
+        {
+          "path": "frontend/src/features/notes/services/notesService.ts",
+          "operation": "create",
+          "description": "Implement notes service functions that call backend capabilities via the core actor client wrapper; include handling for private note encryption/decryption through the encryption service."
+        },
+        {
+          "path": "frontend/src/features/notes/hooks/useNotesQueries.ts",
+          "operation": "create",
+          "description": "Implement React Query hooks for listing, fetching, creating/updating, and deleting notes; ensure enabled/disabled behavior respects authentication and actor availability."
+        },
+        {
+          "path": "frontend/src/features/calendar/index.ts",
+          "operation": "create",
+          "description": "Export calendar feature hooks/components so pages consume calendar data exclusively via hooks."
+        },
+        {
+          "path": "frontend/src/features/calendar/services/calendarService.ts",
+          "operation": "create",
+          "description": "Implement calendar service functions that call backend capabilities via the core actor client wrapper; keep all actor calls out of UI."
+        },
+        {
+          "path": "frontend/src/features/calendar/hooks/useCalendarQueries.ts",
+          "operation": "create",
+          "description": "Implement React Query hooks for daily events and event mutations; ensure auth gating and consistent cache invalidation."
+        },
+        {
+          "path": "frontend/src/features/settings/index.ts",
+          "operation": "create",
+          "description": "Export settings feature hooks/components so the settings screen stays presentational and uses hooks/services only."
+        },
+        {
+          "path": "frontend/src/features/settings/services/settingsService.ts",
+          "operation": "create",
+          "description": "Implement settings service functions calling backend capabilities via the core actor client wrapper, and local-only encryption key lifecycle operations via the encryption service."
+        },
+        {
+          "path": "frontend/src/features/settings/hooks/useSettingsQueries.ts",
+          "operation": "create",
+          "description": "Implement React Query hooks for loading and saving user settings; ensure they are disabled when unauthenticated."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Implement Internet Identity sign-in/out and enforce authenticated access in the UI for notes, events, and settings.",
+      "acceptanceCriteria": [
+        "Users can sign in and sign out via Internet Identity.",
+        "Authenticated principal is displayed in the UI (e.g., shortened principal).",
+        "Backend rejects create/update/delete operations for notes/events unless a caller principal is present and authorized (caller-only access to their data)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/auth/components/LoginButton.tsx",
+          "operation": "create",
+          "description": "Create a login/logout button using the immutable useInternetIdentity hook and React Query cache clearing on logout. Use shadcn-ui components for consistent styling. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/auth/components/AuthGate.tsx",
+          "operation": "create",
+          "description": "Create an auth gate wrapper that blocks access to protected app routes when not authenticated, showing an English login prompt screen and the LoginButton. Use shadcn-ui components for layout/alerts. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/auth/utils/principalDisplay.ts",
+          "operation": "create",
+          "description": "Add utility to format/shorten the principal for UI display while keeping user-facing text in English."
+        },
+        {
+          "path": "frontend/src/components/layout/AppLayout.tsx",
+          "operation": "create",
+          "description": "Create a shared layout with top navigation that shows login/logout controls and the shortened principal when authenticated. Use shadcn-ui components (e.g., Button, Dropdown/Menu, Card) by composing them. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Wire AuthGate into the route tree so Notes, Calendar, and Settings screens are inaccessible while unauthenticated; keep routing and navigation consistent across the app."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Implement notes management UI (create/edit/delete/list) with private-note encryption handled client-side and ciphertext stored remotely.",
+      "acceptanceCriteria": [
+        "UI supports creating, editing, deleting, and listing notes for the signed-in user.",
+        "A note has at least: id, title (optional), body, createdAt, updatedAt, isPrivate.",
+        "If isPrivate is true, the backend stores only ciphertext (and any non-sensitive metadata needed for listing), and the frontend decrypts content for display/editing.",
+        "Non-private notes are stored and retrieved in plaintext (or consistently encrypted if implemented that way), with behavior clearly reflected in UI."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/notes/types.ts",
+          "operation": "create",
+          "description": "Define frontend note view models (including body/title/isPrivate/createdAt/updatedAt) and mapping helpers to/from the backend Note shape, without exposing service/actor calls to UI."
+        },
+        {
+          "path": "frontend/src/features/notes/components/NotesList.tsx",
+          "operation": "create",
+          "description": "Create a presentational notes list component (recent + full list) with private-note indicators, using notes hooks only. Use shadcn-ui components for list rows/cards. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/notes/components/NoteEditor.tsx",
+          "operation": "create",
+          "description": "Create a presentational note editor for create/edit with fields (optional title, body, isPrivate) and English helper text explaining private vs non-private behavior; integrate event suggestion UI (from NLP) via props/callbacks and feature hooks. Use shadcn-ui form components. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/notes/components/PrivateNoteDecryptState.tsx",
+          "operation": "create",
+          "description": "Add a clear UI state shown when a private note cannot be decrypted locally (missing key or decryption failure), with guidance in English and a link/button to Settings for key management. Use shadcn-ui Alert components. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/notes/pages/NotesPage.tsx",
+          "operation": "create",
+          "description": "Create the Notes screen page that composes NotesList + NoteEditor and uses notes React Query hooks; ensure no direct actor imports."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Register and wire the Notes route into navigation so it is reachable from the dashboard/nav and protected by AuthGate."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Add an AES-256 Web Crypto encryption service with a per-user local key; encrypt/decrypt private notes and handle missing key UX.",
+      "acceptanceCriteria": [
+        "Frontend includes an encryption service module that can generate/load a key, encrypt plaintext, and decrypt ciphertext using AES-256.",
+        "Encryption key is persisted locally (per browser profile) and never sent to the backend.",
+        "Attempting to view a private note without the local key present results in a clear UI state (e.g., cannot decrypt message + guidance)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/core/crypto/encryptionService.ts",
+          "operation": "create",
+          "description": "Implement AES-256 encryption/decryption with Web Crypto (AES-GCM recommended) including key generation, local persistence, and helpers for encoding/decoding ciphertext payloads. Ensure the key never leaves the browser."
+        },
+        {
+          "path": "frontend/src/core/crypto/keyStorage.ts",
+          "operation": "create",
+          "description": "Implement local key persistence (e.g., localStorage/IndexedDB abstraction) with explicit reset/remove operations to support Settings key lifecycle actions."
+        },
+        {
+          "path": "frontend/src/features/notes/services/notesService.ts",
+          "operation": "modify",
+          "description": "Integrate encryptionService so that when isPrivate is true, note content is encrypted before calling backend capabilities and decrypted after retrieval; propagate explicit decrypt-missing/decrypt-failed states to the notes hooks."
+        },
+        {
+          "path": "frontend/src/features/settings/components/EncryptionKeyPanel.tsx",
+          "operation": "create",
+          "description": "Create an encryption key management panel with at least a reset action (with English confirmation + clear warning about losing access to existing private notes) and optional export warnings. Use shadcn-ui Dialog/Alert components by composition. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Implement a local, rule-based NLP/date-time extraction module producing {date,time,confidence} for event suggestions from note text.",
+      "acceptanceCriteria": [
+        "When editing/creating a note, the UI can run a local extractor that attempts to detect a date and/or time from the note body.",
+        "Extractor returns an object with fields date (ISO yyyy-mm-dd or null), time (HH:MM or null), confidence (0..1).",
+        "No external AI/LLM API calls are used for NLP/date extraction."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/notes/nlp/dateTimeExtractor.ts",
+          "operation": "create",
+          "description": "Implement a local rule-based extractor (regex + heuristics) to detect dates/times (e.g., ISO dates, common 'Feb 20 2026', 'tomorrow', 'next Monday', '14:00', '2pm') and return { date, time, confidence }."
+        },
+        {
+          "path": "frontend/src/features/notes/hooks/useDateTimeSuggestion.ts",
+          "operation": "create",
+          "description": "Create a hook that runs the extractor on the note body (debounced) and exposes the structured suggestion for the NoteEditor to render and act on."
+        },
+        {
+          "path": "frontend/src/features/notes/components/NoteEditor.tsx",
+          "operation": "modify",
+          "description": "Wire the date/time suggestion UI into the note editor: show detected date/time with confidence and provide a one-click action to create a pre-filled event via calendar feature hooks (no external services). Use shadcn-ui components for callouts/buttons. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Add calendar UI with monthly view + daily agenda; allow manual event creation and event creation from note suggestions.",
+      "acceptanceCriteria": [
+        "UI includes a monthly calendar view and a daily agenda list for a selected date.",
+        "Users can create/edit/delete events (title, date, time, optional link to a noteId).",
+        "When NLP extraction yields a date/time, the UI offers a one-click 'Create event' suggestion pre-filled from the note.",
+        "Backend persists events per authenticated user and returns events filtered by date range or date."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/calendar/components/MonthCalendar.tsx",
+          "operation": "create",
+          "description": "Create a monthly calendar grid component (no external calendar libraries) with selectable day and visual indication for days with events (via props). Use shadcn-ui components for consistent styling. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/calendar/components/DailyAgenda.tsx",
+          "operation": "create",
+          "description": "Create a daily agenda list for the selected date with event rows and delete action; keep all data operations in calendar hooks/services. Use shadcn-ui components. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/calendar/components/EventForm.tsx",
+          "operation": "create",
+          "description": "Create an event form for manual creation and for pre-filled creation from note suggestions (title/date/time, optional description/location, optional noteId link shown in UI). Use shadcn-ui form components. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/calendar/pages/CalendarPage.tsx",
+          "operation": "create",
+          "description": "Create the Calendar screen combining MonthCalendar + DailyAgenda + EventForm, with state for selected date; fetch events through calendar hooks only."
+        },
+        {
+          "path": "frontend/src/features/notes/components/NoteEditor.tsx",
+          "operation": "modify",
+          "description": "When the extractor yields a suggestion, wire the 'Create event' action to call calendar hooks (which use calendar services) and create an event pre-filled from the note."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Register and wire the Calendar route into navigation so it is reachable from the dashboard/nav and protected by AuthGate."
+        }
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "summary": "Create a unified dashboard that shows recent notes and today’s agenda with navigation to Notes, Calendar, and Settings using only feature hooks/services.",
+      "acceptanceCriteria": [
+        "Dashboard shows at least: a recent notes section and today’s events section.",
+        "Dashboard provides clear navigation to Notes, Calendar, and Settings screens.",
+        "All displayed data comes through the feature service/query layer (not direct actor calls in the dashboard component)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/dashboard/pages/DashboardPage.tsx",
+          "operation": "create",
+          "description": "Create a Dashboard page that composes a recent notes section and today's agenda section using notes/calendar feature hooks only (no actor imports). Use shadcn-ui Cards and Buttons for layout. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/layout/PrimaryNav.tsx",
+          "operation": "create",
+          "description": "Create a consistent navigation component with links to Dashboard, Notes, Calendar, and Settings; integrate with AppLayout. Use shadcn-ui components by composition. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Wire the Dashboard as the primary authenticated landing route and ensure navigation is present and consistent across protected screens."
+        }
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "summary": "Add a Settings screen with encryption key management actions and basic app preferences, in English.",
+      "acceptanceCriteria": [
+        "Settings route is accessible from the dashboard/nav.",
+        "Settings includes at least one encryption-related management action (e.g., reset local key with confirmation and explanation of impact).",
+        "All user-facing text is in English."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/settings/pages/SettingsPage.tsx",
+          "operation": "create",
+          "description": "Create the Settings screen that includes encryption key lifecycle actions (via EncryptionKeyPanel) and general UI preferences (e.g., dark mode) through settings hooks. Use shadcn-ui components. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/settings/components/UiPreferencesPanel.tsx",
+          "operation": "create",
+          "description": "Add a small UI preferences panel (e.g., dark mode toggle backed by user settings) with English labels and helper text. Use shadcn-ui Switch components. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Register and wire the Settings route into navigation so it is reachable and protected by AuthGate."
+        }
+      ]
+    },
+    {
+      "id": "REQ-9",
+      "summary": "Add an in-repo step-by-step delivery plan document mapping milestones to routes/features and backend methods/types (documentation).",
+      "acceptanceCriteria": [
+        "Repo includes a concise implementation plan document that breaks work into ordered steps (e.g., Auth → Notes → Encryption → NLP → Calendar → Dashboard → Settings).",
+        "Each step lists what UI routes/components are added and what backend methods/types are added/changed.",
+        "Plan is written in English and matches the implemented feature set."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/IMPLEMENTATION_PLAN.md",
+          "operation": "create",
+          "description": "Write an English milestone plan (Auth → Notes → Encryption → NLP → Calendar → Dashboard → Settings) mapping each step to the app routes/components and the backend capabilities/types used (do not use the word 'endpoint')."
+        }
+      ]
+    },
+    {
+      "id": "REQ-10",
+      "summary": "Apply a coherent, consistent Tailwind theme and reusable layout patterns suitable for a secure productivity app (non-blue/purple primary).",
+      "acceptanceCriteria": [
+        "App uses a consistent, non-default theme (not blue/purple as the primary palette) across pages.",
+        "Typography, spacing, and navigation patterns are consistent across Dashboard, Notes, Calendar, and Settings.",
+        "Theme is implemented using Tailwind and existing UI components (composed, not modified in immutable UI component source paths)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/index.css",
+          "operation": "create",
+          "description": "Add Tailwind base/components/utilities plus CSS variables for the app theme (choose a non-blue/purple primary palette such as emerald/teal/amber), and define consistent typography/spacing defaults for the app."
+        },
+        {
+          "path": "frontend/tailwind.config.js",
+          "operation": "modify",
+          "description": "Adjust theme tokens and ensure the color variables support the chosen non-blue/purple primary palette and consistent surfaces (card/popover/sidebar) across the app."
+        },
+        {
+          "path": "frontend/src/components/layout/AppLayout.tsx",
+          "operation": "modify",
+          "description": "Enforce consistent layout spacing, typography, and navigation patterns across all feature screens by applying the shared layout wrappers and reusable shadcn-ui compositions. Verify the component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

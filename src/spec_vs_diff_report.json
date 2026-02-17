@@ -1,0 +1,93 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-17T14:58:53.207Z",
+  "summary": "The diff implements a layered, feature-based React frontend with auth gating and calendar UI, plus a Motoko backend actor with notes/events/settings state and authorization checks. However, private-note ciphertext-only storage is not evidenced on the backend, and calendar events lack the requested optional note linkage and the UI flow for creating an event from a note suggestion is not shown/connected.",
+  "missing_requirements": [
+    {
+      "id": "REQ-3",
+      "requirement": "Private notes must be stored end-to-end encrypted with only ciphertext stored on the backend when isPrivate is true (frontend decrypts).",
+      "reason": "The backend Note type has a single `content : Text` field and `createNote` stores `content` directly regardless of `isPrivate`, with no separate ciphertext field or conditional storage behavior evidenced.",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "requirement": "Events support an optional link to a noteId, and the UI supports one-click creation of an event from a note using the extracted date/time suggestion.",
+      "reason": "The backend `Event` type does not include a `noteId` (or similar) field, and `createEvent`/CalendarService do not accept a noteId parameter. Additionally, CalendarPage does not pass `prefillData` into EventForm, so the note→event suggestion flow is not evidenced as wired.",
+      "evidence": [
+        "backend/main.mo",
+        "frontend/src/features/calendar/services/calendarService.ts",
+        "frontend/src/features/calendar/pages/CalendarPage.tsx",
+        "frontend/src/features/calendar/components/EventForm.tsx"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Footer attribution/link to caffeine.ai ('Built with ... using caffeine.ai').",
+      "reason": "Not requested in any requirement; introduces external branding/link in UI.",
+      "evidence": [
+        "frontend/src/components/layout/AppLayout.tsx"
+      ]
+    },
+    {
+      "description": "Backend `Todo` type definition.",
+      "reason": "Todos are not part of the BuildRequest requirements (notes, calendar/events, settings, auth, encryption, NLP).",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    }
+  ],
+  "confidence": 0.64,
+  "changed_files": [
+    "all_files_summary.json",
+    "backend/main.mo",
+    "frontend-file-summaries.txt",
+    "frontend/IMPLEMENTATION_PLAN.md",
+    "frontend/index.css",
+    "frontend/index.html",
+    "frontend/src/App.tsx",
+    "frontend/src/components/layout/AppLayout.tsx",
+    "frontend/src/components/layout/PrimaryNav.tsx",
+    "frontend/src/core/crypto/encryptionService.ts",
+    "frontend/src/core/errors/formatError.ts",
+    "frontend/src/core/query/queryKeys.ts",
+    "frontend/src/features/auth/components/AuthGate.tsx",
+    "frontend/src/features/auth/components/LoginButton.tsx",
+    "frontend/src/features/auth/hooks/useAuth.ts",
+    "frontend/src/features/auth/index.ts",
+    "frontend/src/features/auth/utils/principalDisplay.ts",
+    "frontend/src/features/calendar/components/DailyAgenda.tsx",
+    "frontend/src/features/calendar/components/EventForm.tsx",
+    "frontend/src/features/calendar/components/MonthCalendar.tsx",
+    "frontend/src/features/calendar/hooks/useCalendarQueries.ts",
+    "frontend/src/features/calendar/index.ts",
+    "frontend/src/features/calendar/pages/CalendarPage.tsx",
+    "frontend/src/features/calendar/services/calendarService.ts",
+    "frontend/src/features/dashboard/pages/DashboardPage.tsx",
+    "frontend/src/features/notes/components/NoteEditor.tsx",
+    "frontend/src/features/notes/components/NotesList.tsx",
+    "frontend/src/features/notes/hooks/useDateTimeSuggestion.ts",
+    "frontend/src/features/notes/hooks/useNotesQueries.ts",
+    "frontend/src/features/notes/index.ts",
+    "frontend/src/features/notes/nlp/dateTimeExtractor.ts",
+    "frontend/src/features/notes/pages/NotesPage.tsx",
+    "frontend/src/features/notes/services/notesService.ts",
+    "frontend/src/features/notes/types.ts",
+    "frontend/src/features/settings/components/EncryptionKeyPanel.tsx",
+    "frontend/src/features/settings/components/UiPreferencesPanel.tsx",
+    "frontend/src/features/settings/hooks/useSettingsQueries.ts",
+    "frontend/src/features/settings/index.ts",
+    "frontend/src/features/settings/pages/SettingsPage.tsx",
+    "frontend/src/features/settings/services/settingsService.ts",
+    "frontend/src/hooks/useActor.ts",
+    "frontend/src/hooks/useInternetIdentity.ts",
+    "frontend/src/index.css",
+    "frontend/src/main.tsx",
+    "frontend/src/utils/urlParams.ts",
+    "frontend/tailwind.config.js",
+    "project_state.json"
+  ]
+}

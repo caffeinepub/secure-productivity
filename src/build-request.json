@@ -1,0 +1,213 @@
+{
+  "kind": "build_request",
+  "title": "Implement secure productivity app (auth, encrypted notes, NLP date extraction, calendar) with layered architecture",
+  "projectName": "Secure Productivity",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Create a feature-based, layered frontend code organization that enforces unidirectional flow: UI components must not call the backend actor directly; instead, UI uses feature-scoped hooks/state → service layer → actor client calls.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2",
+          "msg-4"
+        ],
+        "quotes": [
+          "The Presentation Layer must not communicate directly with the database. All data operations must pass through service classes",
+          "Recommended pattern:\nUI → Provider → Service → Database"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Frontend has a clear feature-based folder structure (e.g., features/auth, features/notes, features/calendar, features/settings, features/dashboard) plus shared core/services/util modules.",
+        "No page/component imports the actor/client directly; actor calls are wrapped by service functions per feature.",
+        "Data fetching/mutations are managed via React Query hooks (or equivalent) exposed by feature modules, not inside presentational components."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Implement authentication using Internet Identity and enforce authenticated access for note, event, and settings operations.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "Core Application Modules\n1. Authentication System\n\nFeatures:\n\nUser login and registration\n\nSecure token management\n\nBiometric authentication\n\nAutomatic session handling"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Users can sign in and sign out via Internet Identity.",
+        "Authenticated principal is displayed in the UI (e.g., shortened principal).",
+        "Backend rejects create/update/delete operations for notes/events unless a caller principal is present and authorized (caller-only access to their data)."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Implement notes management (create, edit, delete, list) with support for marking a note as private and storing private notes encrypted end-to-end (ciphertext stored on the backend).",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "2. Note Management System\n\nFeatures:\n\nCreate, edit, and delete notes\n\nEncrypted private notes"
+        ]
+      },
+      "acceptanceCriteria": [
+        "UI supports creating, editing, deleting, and listing notes for the signed-in user.",
+        "A note has at least: id, title (optional), body, createdAt, updatedAt, isPrivate.",
+        "If isPrivate is true, the backend stores only ciphertext (and any non-sensitive metadata needed for listing), and the frontend decrypts content for display/editing.",
+        "Non-private notes are stored and retrieved in plaintext (or consistently encrypted if implemented that way), with behavior clearly reflected in UI."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Add a client-side encryption service using AES-256 (Web Crypto) with a per-user key stored locally in the browser; encrypt private notes before sending them to the backend and decrypt them after retrieval.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "Implementation in encryption_service.dart:\n\nAES-256 encryption standard\n\nEncryption key stored in secure storage\n\nNotes encrypted before saving\n\nNotes decrypted upon retrieval"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Frontend includes an encryption service module that can generate/load a key, encrypt plaintext, and decrypt ciphertext using AES-256.",
+        "Encryption key is persisted locally (per browser profile) and never sent to the backend.",
+        "Attempting to view a private note without the local key present results in a clear UI state (e.g., cannot decrypt message + guidance)."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Implement an NLP/date-time extraction module that analyzes note text locally (no external AI services) and produces structured output { date, time, confidence } to drive event suggestions.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "Expected structured output:\n\n{\n  \"date\": \"2026-02-20\",\n  \"time\": \"14:00\",\n  \"confidence\": 0.92\n}"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When editing/creating a note, the UI can run a local extractor that attempts to detect a date and/or time from the note body.",
+        "Extractor returns an object with fields date (ISO yyyy-mm-dd or null), time (HH:MM or null), confidence (0..1).",
+        "No external AI/LLM API calls are used for NLP/date extraction."
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "text": "Implement calendar management with a monthly calendar view and daily agenda; allow creating events manually and allow creating an event from a note based on the extracted date/time suggestion.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "4. Calendar Management System\n\nFeatures:\n\nMonthly calendar view\n\nDaily agenda display",
+          "Process flow:\nUser input → NLP analysis → Extract date/time → Suggest event creation"
+        ]
+      },
+      "acceptanceCriteria": [
+        "UI includes a monthly calendar view and a daily agenda list for a selected date.",
+        "Users can create/edit/delete events (title, date, time, optional link to a noteId).",
+        "When NLP extraction yields a date/time, the UI offers a one-click 'Create event' suggestion pre-filled from the note.",
+        "Backend persists events per authenticated user and returns events filtered by date range or date."
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "text": "Create a unified dashboard screen that surfaces key actions and summaries for notes and calendar (e.g., recent notes and today’s agenda) and provides navigation to core features (Notes, Calendar, Settings).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "Unified dashboard interface"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Dashboard shows at least: a recent notes section and today’s events section.",
+        "Dashboard provides clear navigation to Notes, Calendar, and Settings screens.",
+        "All displayed data comes through the feature service/query layer (not direct actor calls in the dashboard component)."
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "text": "Add a Settings screen/module with basic user options relevant to this web app (e.g., manage encryption key lifecycle actions like reset/export warnings, and general UI preferences if applicable).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "settings/\n       └── settings_screen.dart"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Settings route is accessible from the dashboard/nav.",
+        "Settings includes at least one encryption-related management action (e.g., reset local key with confirmation and explanation of impact).",
+        "All user-facing text is in English."
+      ]
+    },
+    {
+      "id": "REQ-9",
+      "text": "Implement a clear step-by-step delivery plan inside the repo (as documentation) describing incremental milestones for building the modules in order, mapping each milestone to the app routes/features and backend endpoints.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "mplement it step by step"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Repo includes a concise implementation plan document that breaks work into ordered steps (e.g., Auth → Notes → Encryption → NLP → Calendar → Dashboard → Settings).",
+        "Each step lists what UI routes/components are added and what backend methods/types are added/changed.",
+        "Plan is written in English and matches the implemented feature set."
+      ]
+    },
+    {
+      "id": "REQ-10",
+      "text": "Apply a coherent visual theme across the frontend (colors, typography, spacing, component usage) suitable for a secure productivity app, and enforce consistency across all feature screens.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2",
+          "msg-5"
+        ],
+        "quotes": [
+          "It functions as a comprehensive intelligent productivity system designed with scalability and security in mind.",
+          "mplement it step by step"
+        ]
+      },
+      "acceptanceCriteria": [
+        "App uses a consistent, non-default theme (not blue/purple as the primary palette) across pages.",
+        "Typography, spacing, and navigation patterns are consistent across Dashboard, Notes, Calendar, and Settings.",
+        "Theme is implemented using Tailwind and existing UI components (composed, not modified in immutable UI component source paths)."
+      ]
+    }
+  ],
+  "constraints": [
+    "Backend must remain a single Motoko actor (all core logic in the main actor file); only add migration.mo if upgrading existing stable state is required.",
+    "Do not edit files under frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui (compose these components instead).",
+    "Use English for all user-facing text.",
+    "Do not implement Flutter/Dart, Flutter packages (local_auth, flutter_secure_storage, table_calendar, device_calendar), or SQLite/Firebase/Supabase; this project must use the provided React + Motoko Internet Computer stack.",
+    "Do not integrate external AI/LLM services for NLP; date/time extraction must be local/rule-based."
+  ],
+  "nonGoals": [
+    "Biometric authentication (not supported in the specified stack).",
+    "Device calendar synchronization with native device calendars (not supported as a required integration).",
+    "Using Python-based NLP tooling such as PyThaiNLP (not supported in this environment).",
+    "Third-party authentication providers beyond Internet Identity.",
+    "Real-time features (WebSockets) or push notifications."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}
